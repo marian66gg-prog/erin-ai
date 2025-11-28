@@ -1,316 +1,205 @@
 <!doctype html>
 <html lang="ro">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Erin AI — 3D Chat</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Erin — 3D AI</title>
 
-  <!-- Three.js + GLTFLoader (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.154.0/examples/js/loaders/GLTFLoader.js"></script>
+<!-- three.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.154.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.154.0/examples/js/loaders/GLTFLoader.js"></script>
 
-  <style>
-    :root{
-      --bg:#0f1113; --card:#0f1720; --accent:#2dd4bf; --muted:#9aa4ae;
-      color-scheme: dark;
-    }
-    html,body{height:100%;margin:0;background:var(--bg);font-family:Inter, Arial, sans-serif;color:#e6eef3}
-    .page{display:flex;gap:20px;min-height:100vh;padding:18px;box-sizing:border-box}
-    .left{flex:1;display:flex;flex-direction:column;gap:12px}
-    .right{width:380px;max-width:44vw;min-width:300px;display:flex;flex-direction:column;gap:12px}
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(0,0,0,0.6)}
-    #viewport{width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#0b0d0f}
-    h1{margin:0;font-size:20px}
-    .controls{display:flex;gap:8px;align-items:center}
-    .btn{background:var(--accent);border:none;color:#042024;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
-    .mute{background:#263238;color:#cfeeea}
-    /* chat */
-    .chat{display:flex;flex-direction:column;height:70vh}
-    .messages{flex:1;overflow:auto;padding:8px;gap:8px;display:flex;flex-direction:column}
-    .msg{max-width:86%;padding:10px;border-radius:10px;}
-    .msg.user{align-self:flex-end;background:#0b1220;color:#e6f7f3}
-    .msg.erin{align-self:flex-start;background:#072a2b;color:#cffff5}
-    .inputRow{display:flex;gap:8px;padding-top:8px}
-    .textInput{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
-    .small{font-size:12px;color:var(--muted)}
-    footer.small{font-size:12px;color:var(--muted);padding-top:6px}
-  </style>
+<style>
+  html,body{height:100%;margin:0;background:#07080a;color:#e6f7f3;font-family:Inter,Arial}
+  #viewport{width:100vw;height:100vh;display:block;background:#000}
+  .ui {
+    position: fixed; right: 12px; bottom: 12px; z-index: 30;
+    width: 360px; max-width: calc(100% - 24px);
+    background: rgba(2,6,10,0.66); padding:12px; border-radius:12px; backdrop-filter: blur(6px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+  }
+  .ui .row{display:flex;gap:8px;margin-bottom:8px}
+  .btn{flex:0 0 auto;background:#00b7ff;border:0;color:#002; padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700}
+  .btn.secondary{background:#203040;color:#fff}
+  .input{flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+  .messages{max-height:220px;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:6px}
+  .msg{padding:8px;border-radius:10px;max-width:85%}
+  .msg.user{align-self:flex-end;background:#06202a}
+  .msg.erin{align-self:flex-start;background:#083233}
+  footer{font-size:12px;color:#98a4ad;margin-top:6px}
+</style>
 </head>
 <body>
-  <div class="page">
-    <div class="left">
-      <div class="card">
-        <h1>Erin AI — 3D realist (demo)</h1>
-        <div class="small">Model 3D (procedural) + animații simple. Click pe buton pentru a vorbi / a primi răspuns.</div>
-        <div id="viewport" class="card" aria-label="3D viewport"></div>
+  <div id="viewport" aria-label="3D view"></div>
 
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button id="listenBtn" class="btn">Întreabă prin text</button>
-          <button id="speakBtn" class="btn mute">Vorbește (microfon)</button>
-          <button id="animateSmile" class="btn" style="background:#60a5fa;color:#021326">Zâmbește</button>
-          <div style="flex:1"></div>
-        </div>
-        <footer class="small">Sugestie: tastează o întrebare în chat — sau apasă microfonul.</footer>
-      </div>
-
-      <div class="card">
-        <div class="small">Stare Erin: <span id="erinState">idle</span></div>
-        <progress id="synthProgress" value="0" max="1" style="width:100%;display:none"></progress>
-      </div>
+  <div class="ui" role="region" aria-label="Interfață Erin">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <strong>Erin — asistent AI (ro-RO)</strong>
+      <div style="flex:1"></div>
+      <button id="fullscreenBtn" class="btn secondary">Fullscreen</button>
     </div>
 
-    <div class="right">
-      <div class="card chat">
-        <div class="messages" id="messages"></div>
+    <div class="messages" id="messages"></div>
 
-        <div style="display:flex;flex-direction:column">
-          <div class="inputRow">
-            <input id="input" class="textInput" placeholder="Scrie o întrebare..." />
-            <button id="send" class="btn">Trimite</button>
-          </div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button id="voiceToggle" class="btn mute">Audio: ON</button>
-            <button id="clearBtn" class="btn" style="background:#ef4444;color:white">Curăță</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div><strong>Instrucțiuni rapide</strong></div>
-        <ol>
-          <li>Configurează `SERVER_ENDPOINT` (mai jos) — vezi serverul Node.</li>
-          <li>Nu pune cheia în frontend!</li>
-          <li>Deschide site-ul la <code>/index.html</code>.</li>
-        </ol>
-      </div>
+    <div class="row">
+      <input id="input" class="input" placeholder="Scrie ceva..." />
+      <button id="sendBtn" class="btn">Trimite</button>
     </div>
+
+    <div class="row">
+      <button id="micBtn" class="btn secondary">Vorbește (microfon)</button>
+      <button id="voiceToggle" class="btn">Audio: ON</button>
+      <button id="smileBtn" class="btn secondary">Gest</button>
+    </div>
+
+    <footer>Apasă "Vorbește" și dă permisiuni la microfon. Nu pune cheia OpenAI în acest fișier.</footer>
   </div>
 
 <script>
-/* ---------- CONFIG - schimba aici endpointul serverului tău ---------- */
-const SERVER_ENDPOINT = '/.netlify/functions/openai' // sau 'https://example.com/openai' (dacă îl hostezi)
-const VOICE_ENABLED = true; // folosește SpeechSynthesis
-/* -------------------------------------------------------------------- */
+/* =========== CONFIG =========== 
+   - După ce publici backend pe Render pune aici URL-ul endpoint-ului:
+   ex: const SERVER_ENDPOINT = "https://erin-backend.onrender.com/openai"
+   Nu pune cheia aici!
+*/
+const SERVER_ENDPOINT = "REPLACE_WITH_YOUR_BACKEND_URL/openai";
+const VOICE_ON = true;
 
-/* ---------- Three.js 3D "Erin" simplificat (procedural head with eyes + mouth) ---------- */
-let scene, camera, renderer, controls, clock;
-let headGroup, mouthMesh, leftEye, rightEye;
-function initThree(){
+/* =========== 3D (Three.js) =========== */
+let scene, camera, renderer, clock, robot;
+function init3D(){
   const container = document.getElementById('viewport');
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x0b0d0f, 0.06);
-
-  const w = container.clientWidth, h = container.clientHeight;
-  camera = new THREE.PerspectiveCamera(35, w/h, 0.1, 100);
-  camera.position.set(0, 1.2, 3.2);
-
-  renderer = new THREE.WebGLRenderer({antialias:true,alpha:false});
-  renderer.setSize(w,h);
+  camera = new THREE.PerspectiveCamera(40, innerWidth/innerHeight, 0.1, 100);
+  camera.position.set(0,1.4,3.2);
+  renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(innerWidth, innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-  container.innerHTML = '';
   container.appendChild(renderer.domElement);
 
-  controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enablePan = false;
-  controls.minDistance = 1.6; controls.maxDistance = 6;
-  controls.target.set(0,1,0);
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x111122, 0.9);
+  scene.add(hemi);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.8); dir.position.set(5,10,7); scene.add(dir);
 
-  const light = new THREE.DirectionalLight(0xffffff, 1.1);
-  light.position.set(5, 10, 7);
-  scene.add(light);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-
-  // ground subtle
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(200,200), new THREE.MeshStandardMaterial({color:0x050607,metalness:0.1,roughness:0.9}));
+  // ground
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(200,200), new THREE.MeshStandardMaterial({color:0x060607,roughness:0.95}));
   ground.rotation.x = -Math.PI/2; scene.add(ground);
 
-  // head group
-  headGroup = new THREE.Group();
-  scene.add(headGroup);
+  // placeholder procedural head/body (if model load fails)
+  robot = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.9,1.6,0.6), new THREE.MeshStandardMaterial({color:0x2c3e50}));
+  body.position.y = 0; robot.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.42,32,32), new THREE.MeshStandardMaterial({color:0xf0f5f7}));
+  head.position.set(0,1.1,0); robot.add(head);
+  // eyes + mouth
+  const eye = new THREE.SphereGeometry(0.06,16,16);
+  const leftEye = new THREE.Mesh(eye,new THREE.MeshStandardMaterial({color:0x001f26})); leftEye.position.set(-0.14,1.18,0.36);
+  const rightEye= leftEye.clone(); rightEye.position.set(0.14,1.18,0.36);
+  robot.add(leftEye,rightEye);
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.32,0.08,0.02), new THREE.MeshStandardMaterial({color:0x001419})); mouth.position.set(0,1.0,0.36); robot.add(mouth);
 
-  // face (sphere)
-  const faceGeo = new THREE.SphereGeometry(0.9, 48, 48);
-  const faceMat = new THREE.MeshStandardMaterial({color:0x2e2e2f, metalness:0.05, roughness:0.35});
-  const face = new THREE.Mesh(faceGeo, faceMat);
-  face.position.y = 1.05;
-  headGroup.add(face);
-
-  // eyes
-  const eyeGeo = new THREE.SphereGeometry(0.12, 32, 32);
-  const irisMat = new THREE.MeshStandardMaterial({color:0x8fe0e0, metalness:0.2, roughness:0.3});
-  leftEye = new THREE.Mesh(eyeGeo, irisMat); rightEye = new THREE.Mesh(eyeGeo, irisMat);
-  leftEye.position.set(-0.33, 1.15, 0.8);
-  rightEye.position.set( 0.33, 1.15, 0.8);
-  headGroup.add(leftEye, rightEye);
-
-  // mouth - simple box we scale
-  const mouthGeo = new THREE.BoxGeometry(0.6, 0.08, 0.06);
-  const mouthMat = new THREE.MeshStandardMaterial({color:0x051213});
-  mouthMesh = new THREE.Mesh(mouthGeo, mouthMat);
-  mouthMesh.position.set(0, 0.85, 0.86);
-  headGroup.add(mouthMesh);
+  robot.position.y = -0.6;
+  scene.add(robot);
 
   clock = new THREE.Clock();
-
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', onResize);
   animate();
 }
-
-function resize(){
-  const container = document.getElementById('viewport');
-  const w = container.clientWidth, h = container.clientHeight;
-  renderer.setSize(w,h); camera.aspect = w/h; camera.updateProjectionMatrix();
-}
-
+function onResize(){ renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix(); }
 function animate(){
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
-
-  // breathe
-  headGroup.rotation.y = 0.05 * Math.sin(t * 0.6);
-  headGroup.position.y = 0.02 * Math.sin(t * 0.9);
-
-  // eye subtle look at camera
-  const v = new THREE.Vector3();
-  camera.getWorldDirection(v);
-  leftEye.lookAt(camera.position); rightEye.lookAt(camera.position);
-
-  // subtle mouth idle
-  const idle = 0.02 + 0.01*Math.sin(t*3.5);
-  mouthMesh.scale.y = 0.9 + idle;
-
-  renderer.render(scene, camera);
+  // idle breathe
+  robot.rotation.y = 0.03 * Math.sin(t*0.6);
+  robot.position.y = -0.6 + 0.02*Math.sin(t*0.9);
+  renderer.render(scene,camera);
 }
+init3D();
 
-/* ---------- Chat + OpenAI calls (via your server) ---------- */
+/* =========== UI + Chat =========== */
 const messagesEl = document.getElementById('messages');
-const input = document.getElementById('input');
-const sendBtn = document.getElementById('send');
+const inputEl = document.getElementById('input');
+const sendBtn = document.getElementById('sendBtn');
+const micBtn = document.getElementById('micBtn');
 const voiceToggle = document.getElementById('voiceToggle');
-const erinStateEl = document.getElementById('erinState');
-
-let voiceOn = VOICE_ENABLED;
+let voiceEnabled = VOICE_ON;
 
 function addMessage(text, who='erin'){
-  const d = document.createElement('div');
-  d.className = 'msg ' + (who === 'user' ? 'user' : 'erin');
-  d.innerText = text;
-  messagesEl.appendChild(d);
+  const el = document.createElement('div');
+  el.className = 'msg ' + (who==='user' ? 'user' : 'erin');
+  el.innerText = text;
+  messagesEl.appendChild(el);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-async function callOpenAI(prompt){
-  erinStateEl.innerText = 'thinking...';
+/* =========== OpenAI call via backend =========== */
+async function askServer(prompt){
+  if(!SERVER_ENDPOINT || SERVER_ENDPOINT.includes('REPLACE_WITH')) {
+    addMessage('Trebuie să setezi SERVER_ENDPOINT în index.html cu URL-ul backend-ului.', 'erin');
+    return 'Config missing';
+  }
   try{
-    const res = await fetch(SERVER_ENDPOINT, {
+    const r = await fetch(SERVER_ENDPOINT, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({prompt})
     });
-    if(!res.ok){
-      const t = await res.text();
-      throw new Error('Server error: ' + t);
+    if(!r.ok){
+      const t = await r.text();
+      console.error('Server error', t);
+      return 'Eroare server: ' + t.slice(0,200);
     }
-    const j = await res.json();
-    return j.text || j.response || j;
-  }catch(err){
-    console.error(err); return 'Îmi pare, am avut o problemă: ' + err.message;
-  }finally{
-    erinStateEl.innerText = 'idle';
+    const j = await r.json();
+    return j.text || j.response || (typeof j === 'string' ? j : JSON.stringify(j));
+  }catch(e){
+    console.error(e);
+    return 'Eroare de rețea';
   }
 }
 
 async function sendPrompt(text){
   if(!text) return;
-  addMessage(text, 'user');
-  input.value = '';
-  const reply = await callOpenAI(text);
-  addMessage(reply, 'erin');
-  if(voiceOn) speakText(reply);
-  // animate mouth while speaking
-  animateMouthSpeaking(reply.length);
+  addMessage(text,'user');
+  inputEl.value = '';
+  const reply = await askServer(text);
+  addMessage(reply,'erin');
+  if(voiceEnabled) speak(reply);
 }
 
-/* ---------- Text-to-speech + lip-sync (very simple) ---------- */
-function speakText(txt){
+/* =========== TTS (browser) =========== */
+function speak(txt){
   if(!('speechSynthesis' in window)) return;
-  const utter = new SpeechSynthesisUtterance(txt);
-  utter.lang = 'ro-RO';
-  utter.rate = 1.0;
-  utter.pitch = 1.0;
-  // onstart -> animate mouth
-  utter.onstart = () => {erinStateEl.innerText='speaking'; startMouthTalking();}
-  utter.onend = () => {erinStateEl.innerText='idle'; stopMouthTalking();}
-  window.speechSynthesis.speak(utter);
+  const u = new SpeechSynthesisUtterance(txt);
+  u.lang = 'ro-RO';
+  u.rate = 1; u.pitch = 1.03;
+  u.onstart = ()=>{}; u.onend=()=>{};
+  window.speechSynthesis.speak(u);
 }
 
-let talkInterval=null;
-function startMouthTalking(){
-  if(talkInterval) clearInterval(talkInterval);
-  talkInterval = setInterval(()=> {
-    mouthMesh.scale.y = 0.8 + Math.random()*0.8;
-  }, 70);
-}
-function stopMouthTalking(){
-  if(talkInterval) clearInterval(talkInterval);
-  mouthMesh.scale.y = 1;
-}
-function animateMouthSpeaking(len){
-  startMouthTalking();
-  setTimeout(()=> stopMouthTalking(), Math.min(7000, Math.max(800, len*30)));
-}
-
-/* ---------- Microfon (speech-to-text) simplu ---------- */
-let recognition=null;
-const speakBtn = document.getElementById('speakBtn');
+/* =========== Microphone (SpeechRecognition) =========== */
+let recognition = null;
 if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SR();
-  recognition.lang = 'ro-RO';
-  recognition.interimResults = false;
-  recognition.onresult = (e) => {
-    const t = e.results[0][0].transcript;
-    input.value = t;
-    sendPrompt(t);
-  };
-  recognition.onerror = (e) => console.warn('Speech error', e);
+  recognition = new SR(); recognition.lang='ro-RO'; recognition.interimResults=false;
+  recognition.onresult = (e)=>{ const t = e.results[0][0].transcript; sendPrompt(t); };
+  recognition.onerror = (e)=> console.warn('SR error', e);
 }
 
-speakBtn.addEventListener('click', ()=> {
-  if(!recognition) {alert('SpeechRecognition nu e suportat în browserul tău.'); return;}
+sendBtn.onclick = ()=> sendPrompt(inputEl.value.trim());
+inputEl.addEventListener('keydown', (e)=> { if(e.key === 'Enter') sendPrompt(inputEl.value.trim()); });
+voiceToggle.onclick = ()=> { voiceEnabled = !voiceEnabled; voiceToggle.innerText = 'Audio: ' + (voiceEnabled ? 'ON':'OFF'); };
+document.getElementById('fullscreenBtn').onclick = async ()=> { try{ await document.documentElement.requestFullscreen(); }catch(e){ } };
+micBtn.onclick = ()=> {
+  if(!recognition) return alert('Microfonul nu este suportat în browserul tău.');
   recognition.start();
-});
-
-/* ---------- UI bindings ---------- */
-sendBtn.onclick = ()=> sendPrompt(input.value.trim());
-input.addEventListener('keydown', (e)=> { if(e.key === 'Enter') sendPrompt(input.value.trim()); });
-voiceToggle.addEventListener('click', ()=> { voiceOn = !voiceOn; voiceToggle.innerText = 'Audio: ' + (voiceOn ? 'ON' : 'OFF'); });
-document.getElementById('clearBtn').addEventListener('click', ()=> messagesEl.innerHTML = '');
-document.getElementById('listenBtn').addEventListener('click', ()=> {
-  const q = prompt('Scrie întrebarea pentru Erin:');
-  if(q) sendPrompt(q);
-});
-document.getElementById('animateSmile').addEventListener('click', ()=> {
-  // small smile animation
-  const orig = mouthMesh.scale.y;
-  let step = 0;
-  const t = setInterval(()=> {
-    mouthMesh.scale.y = orig + 0.6 * Math.sin(step/4);
-    step++;
-    if(step>24){ clearInterval(t); mouthMesh.scale.y = orig; }
-  }, 30);
-});
-
-/* ---------- start ---------- */
-initThree();
-addMessage('Bună! Eu sunt Erin. Întreabă-mă ceva.','erin');
-
-/* show small warning if SERVER_ENDPOINT unchanged */
-if(SERVER_ENDPOINT.includes('netlify')===false && SERVER_ENDPOINT.startsWith('/') ){
-  // relative endpoint probably ok (if serverless). If user hasn't setup server, warn in console.
-  console.log('Asigură-te că ai configurat endpoint server-side pentru OpenAI în SERVER_ENDPOINT.');
+};
+document.getElementById('smileBtn').onclick = ()=> { // quick gesture
+  const orig = robot.scale.y || 1; let step=0;
+  const t = setInterval(()=>{ robot.rotation.x = 0.06*Math.sin(step/3); step++; if(step>20){ clearInterval(t); robot.rotation.x = 0; } }, 40);
 }
+
+/* initial greeting */
+addMessage('Salut — eu sunt Erin. Întreabă-mă orice!', 'erin');
 </script>
 </body>
 </html>
